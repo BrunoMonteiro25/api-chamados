@@ -36,6 +36,12 @@ app.use(cors())
 app.post('/usuarios', async (req, res) => {
   const { nome, email, senha } = req.body
 
+  // Verificar se o email já existe no banco de dados
+  const usuarioExistente = await Usuario.findOne({ email })
+  if (usuarioExistente) {
+    return res.status(400).send({ erro: 'Email já cadastrado !' })
+  }
+
   const usuario = new Usuario({ nome, email, senha })
 
   try {
@@ -118,6 +124,30 @@ app.post('/login', async (req, res) => {
     res.send({ token })
   } catch (err) {
     res.status(500).send('Erro ao fazer login: ' + err)
+  }
+})
+
+// Rota para verificar se o token é válido
+app.post('/verificar-token', async (req, res) => {
+  const token = req.body.token
+
+  if (!token) {
+    return res.status(401).json({ mensagem: 'Token não fornecido.' })
+  }
+
+  try {
+    const decoded = jwt.verify(token, 'chave_secreta_do_token')
+    const usuario = await Usuario.findById(decoded.id)
+
+    if (!usuario) {
+      return res
+        .status(401)
+        .json({ mensagem: 'Token do usuário não encontrado.' })
+    }
+
+    res.json({ isAuthenticated: true })
+  } catch (err) {
+    res.status(401).json({ mensagem: 'Token inválido.' })
   }
 })
 
