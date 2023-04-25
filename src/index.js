@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
+const multer = require('multer')
 
 const app = express()
 
@@ -80,10 +81,14 @@ app.put('/usuarios/:id', async (req, res) => {
   const { nome, email, senha } = req.body
 
   try {
+    const usuarioExistente = await Usuario.findOne({ email })
+    if (usuarioExistente) {
+      return res.status(400).send({ erro: 'Email já cadastrado !' })
+    }
     const usuario = await Usuario.findByIdAndUpdate(id, {
-      nome,
-      email,
-      senha,
+      ...(nome && { nome }), // atualizar apenas se o campo nome for enviado
+      ...(email && { email }), // atualizar apenas se o campo email for enviado
+      ...(senha && { senha }), // atualizar apenas se o campo senha for enviado
     })
     res.send(usuario)
   } catch (err) {
@@ -148,6 +153,28 @@ app.post('/verificar-token', async (req, res) => {
     res.json({ isAuthenticated: true })
   } catch (err) {
     res.status(401).json({ mensagem: 'Token inválido.' })
+  }
+})
+
+// Rota para obter o usuário logado
+app.get('/usuario-logado', async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+
+  if (!token) {
+    return res.status(401).send({ erro: 'Token não fornecido' })
+  }
+
+  try {
+    const decoded = jwt.verify(token, 'chave_secreta_do_token')
+    const usuario = await Usuario.findById(decoded.id)
+
+    if (!usuario) {
+      return res.status(401).send({ erro: 'Token inválido' })
+    }
+
+    res.send(usuario)
+  } catch (err) {
+    res.status(401).send({ erro: 'Token inválido' })
   }
 })
 
