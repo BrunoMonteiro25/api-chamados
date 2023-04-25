@@ -75,21 +75,49 @@ app.get('/usuarios/:id', async (req, res) => {
   }
 })
 
+// Middleware que adiciona o usuário logado na propriedade req
+const adicionarUsuarioLogado = async (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+
+  if (!token) {
+    return res.status(401).send({ erro: 'Token não fornecido' })
+  }
+
+  try {
+    const decoded = jwt.verify(token, 'chave_secreta_do_token')
+    const usuario = await Usuario.findById(decoded.id)
+
+    if (!usuario) {
+      return res.status(401).send({ erro: 'Token inválido' })
+    }
+
+    req.user = usuario // Adiciona o objeto do usuário logado na propriedade req
+    next()
+  } catch (err) {
+    res.status(401).send({ erro: 'Token inválido' })
+  }
+}
+
 // Rota para atualizar um usuário pelo ID
-app.put('/usuarios/:id', async (req, res) => {
+app.put('/usuarios/:id', adicionarUsuarioLogado, async (req, res) => {
   const { id } = req.params
   const { nome, email, senha } = req.body
+  const usuarioLogado = req.user
 
   try {
     const usuarioExistente = await Usuario.findOne({ email })
-    if (usuarioExistente) {
+    if (usuarioExistente && usuarioExistente.email !== usuarioLogado.email) {
       return res.status(400).send({ erro: 'Email já cadastrado !' })
     }
-    const usuario = await Usuario.findByIdAndUpdate(id, {
-      ...(nome && { nome }), // atualizar apenas se o campo nome for enviado
-      ...(email && { email }), // atualizar apenas se o campo email for enviado
-      ...(senha && { senha }), // atualizar apenas se o campo senha for enviado
-    })
+    const usuario = await Usuario.findByIdAndUpdate(
+      id,
+      {
+        ...(nome && { nome }), // atualizar apenas se o campo nome for enviado
+        ...(email && { email }), // atualizar apenas se o campo email for enviado
+        ...(senha && { senha }), // atualizar apenas se o campo senha for enviado
+      },
+      { new: true },
+    )
     res.send(usuario)
   } catch (err) {
     res.status(500).send('Erro ao atualizar um usuário pelo id: ' + err)
@@ -157,25 +185,9 @@ app.post('/verificar-token', async (req, res) => {
 })
 
 // Rota para obter o usuário logado
-app.get('/usuario-logado', async (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '')
-
-  if (!token) {
-    return res.status(401).send({ erro: 'Token não fornecido' })
-  }
-
-  try {
-    const decoded = jwt.verify(token, 'chave_secreta_do_token')
-    const usuario = await Usuario.findById(decoded.id)
-
-    if (!usuario) {
-      return res.status(401).send({ erro: 'Token inválido' })
-    }
-
-    res.send(usuario)
-  } catch (err) {
-    res.status(401).send({ erro: 'Token inválido' })
-  }
+app.get('/usuario-logado', adicionarUsuarioLogado, async (req, res) => {
+  const usuarioLogado = req.user
+  res.send(usuarioLogado)
 })
 
 // Inicia o servidor na porta 8000
