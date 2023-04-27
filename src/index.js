@@ -3,7 +3,6 @@ const mongoose = require('mongoose')
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const jwt = require('jsonwebtoken')
-const multer = require('multer')
 
 const app = express()
 
@@ -188,6 +187,72 @@ app.post('/verificar-token', async (req, res) => {
 app.get('/usuario-logado', adicionarUsuarioLogado, async (req, res) => {
   const usuarioLogado = req.user
   res.send(usuarioLogado)
+})
+
+///////////// Clientes /////////////
+const Cliente = mongoose.model('Cliente', {
+  nome: String,
+  cnpj: String,
+  endereco: String,
+})
+
+// Rota para criar um novo cliente
+app.post('/clientes', async (req, res) => {
+  try {
+    const novoCliente = new Cliente(req.body)
+    const cliente = await novoCliente.save()
+    res.json(cliente)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+})
+
+// Rota para listar todos os clientes
+app.get('/clientes', async (req, res) => {
+  try {
+    const clientes = await Cliente.find({})
+    res.json(clientes)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+})
+
+// Rota para listar um cliente pelo ID
+app.get('/clientes/:id', async (req, res) => {
+  try {
+    const cliente = await Cliente.findById(req.params.id)
+    if (!cliente) res.status(404).send('Cliente não encontrado')
+    res.json(cliente)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+})
+
+// Rota para atualizar um cliente pelo ID
+app.put('/clientes/:id', async (req, res) => {
+  try {
+    const cliente = await Cliente.findOneAndUpdate(
+      { _id: req.params.id },
+      req.body,
+      { new: true },
+    )
+    if (!cliente) res.status(404).send('Cliente não encontrado')
+    res.json(cliente)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+})
+
+// Rota para excluir um cliente pelo ID
+app.delete('/clientes/:id', async (req, res) => {
+  try {
+    const cliente = await Cliente.deleteOne({ _id: req.params.id })
+    if (cliente.deletedCount === 0)
+      res.status(404).send('Cliente não encontrado')
+    res.json({ message: 'Cliente excluído com sucesso!' })
+  } catch (err) {
+    res.status(500).send(err)
+  }
 })
 
 // Inicia o servidor na porta 8000
