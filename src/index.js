@@ -255,6 +255,80 @@ app.delete('/clientes/:id', async (req, res) => {
   }
 })
 
+///////////// Chamados /////////////
+const Chamado = mongoose.model('Chamado', {
+  cliente: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Cliente',
+  },
+  assunto: String,
+  status: String,
+  descricao: String,
+})
+
+// Cria um novo chamado
+app.post('/chamados', async (req, res) => {
+  try {
+    const cliente = await Cliente.findById(req.body.cliente)
+    if (!cliente) throw new Error('Cliente não encontrado')
+
+    const chamado = new Chamado({
+      cliente: cliente._id,
+      assunto: req.body.assunto,
+      status: req.body.status,
+      descricao: req.body.descricao,
+    })
+
+    await chamado.save()
+    res.send(chamado)
+  } catch (error) {
+    res.status(500).send(error)
+  }
+})
+
+// Lista todos os chamados
+app.get('/chamados', async (req, res) => {
+  try {
+    const chamados = await Chamado.find({}).populate('cliente')
+    res.send(chamados)
+  } catch (error) {
+    res.status(500).send(error)
+  }
+})
+
+// Atualiza um chamado
+app.put('/chamados/:id', async (req, res) => {
+  try {
+    const chamado = await Chamado.findById(req.params.id)
+    if (!chamado) throw new Error('Chamado não encontrado')
+
+    const cliente = await Cliente.findById(req.body.cliente)
+    if (!cliente) throw new Error('Cliente não encontrado')
+
+    chamado.cliente = cliente._id
+    chamado.assunto = req.body.assunto
+    chamado.status = req.body.status
+    chamado.descricao = req.body.descricao
+
+    await chamado.save()
+    res.send(chamado)
+  } catch (error) {
+    res.status(500).send(error)
+  }
+})
+
+// Deleta um chamado
+app.delete('/chamados/:id', async (req, res) => {
+  try {
+    const result = await Chamado.deleteOne({ _id: req.params.id })
+    if (result.deletedCount === 0) throw new Error('Chamado não encontrado')
+
+    res.send({ message: 'Chamado removido com sucesso' })
+  } catch (error) {
+    res.status(500).send(error)
+  }
+})
+
 // Inicia o servidor na porta 8000
 app.listen(8000, () => {
   console.log('Servidor iniciado na porta 8000')
