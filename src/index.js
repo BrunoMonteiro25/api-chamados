@@ -264,6 +264,10 @@ const Chamado = mongoose.model('Chamado', {
   assunto: String,
   status: String,
   descricao: String,
+  dataCriacao: {
+    type: Date,
+    default: Date.now,
+  },
 })
 
 // Cria um novo chamado
@@ -277,6 +281,7 @@ app.post('/chamados', async (req, res) => {
       assunto: req.body.assunto,
       status: req.body.status,
       descricao: req.body.descricao,
+      dataCriacao: Date.now(),
     })
 
     await chamado.save()
