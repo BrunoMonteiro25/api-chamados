@@ -6,12 +6,20 @@ const jwt = require('jsonwebtoken')
 
 const app = express()
 
+require('dotenv').config()
+
+const dbUser = process.env.DB_USER
+const dbPassword = process.env.DB_PASS
+
 // Conectar ao MongoDB
 mongoose
-  .connect('mongodb://127.0.0.1:27017/sistema-de-chamados', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(
+    `mongodb+srv://${dbUser}:${dbPassword}@cluster0.czevrov.mongodb.net/?retryWrites=true&w=majority`,
+    {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    },
+  )
   .then(() => {
     console.log('Conectado ao MongoDB')
   })
@@ -333,6 +341,47 @@ app.delete('/chamados/:id', async (req, res) => {
     res.status(500).send(error)
   }
 })
+
+// Função para apagar todas as tabelas e seus dados automaticamente
+const limparTabela = async (model) => {
+  try {
+    await model.deleteMany()
+    console.log(`Tabela ${model.collection.collectionName} limpa com sucesso!`)
+  } catch (error) {
+    console.error(
+      `Erro ao limpar a tabela ${model.collection.collectionName}:`,
+      error,
+    )
+  }
+}
+
+// Função para verificar se há dados nas tabelas e iniciar a contagem dos 30 minutos apenas se houver dados
+const verificarDadosETimer = async () => {
+  const countUsuario = await Usuario.countDocuments()
+  const countCliente = await Cliente.countDocuments()
+  const countChamado = await Chamado.countDocuments()
+
+  if (countUsuario > 0 || countCliente > 0 || countChamado > 0) {
+    setTimeout(() => {
+      limparTabela(Usuario)
+      limparTabela(Cliente)
+      limparTabela(Chamado)
+    }, 1000 * 60 * 30) // 30 minutos em milissegundos
+  } else {
+    console.log('Não há dados para limpar nas tabelas.')
+  }
+}
+
+// Função para agendar a verificação dos dados e iniciar a primeira contagem
+const agendarVerificacao = () => {
+  setTimeout(async () => {
+    await verificarDadosETimer()
+    agendarVerificacao() // Agendar próxima verificação
+  }, 1000 * 60 * 1) // 1 minutos em milissegundos
+}
+
+// Iniciar a primeira verificação
+agendarVerificacao()
 
 // Inicia o servidor na porta 8000
 app.listen(8000, () => {
