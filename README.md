@@ -25,7 +25,6 @@ API para o projeto pessoal Sistema de Chamados.
 - Listar chamados
 - Editar chamado
 - Excluir chamado
-- Limpar o banco de dados a cada 30 minutos
 
 ### Tecnologias :computer:
 
@@ -54,5 +53,5 @@ npm install
 Execute a aplicação:
 
 ```
-node src/index.js
+npm start
 ```
